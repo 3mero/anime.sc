@@ -5,6 +5,45 @@ import type { LogEntry } from "@/hooks/use-logger"
 export const ANILIST_API_URL = "https://graphql.anilist.co"
 export const JIKAN_API_URL = "https://api.jikan.moe/v4"
 
+class RequestQueue {
+  private queue: (() => Promise<void>)[] = []
+  private isProcessing = false
+  private delay = 600 // 600ms delay between requests
+
+  add<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await fn()
+          resolve(result)
+        } catch (error) {
+          reject(error)
+        }
+      })
+      this.process()
+    })
+  }
+
+  private async process() {
+    if (this.isProcessing) return
+    this.isProcessing = true
+
+    while (this.queue.length > 0) {
+      const task = this.queue.shift()
+      if (task) {
+        await task()
+        if (this.queue.length > 0) {
+          await new Promise((resolve) => setTimeout(resolve, this.delay))
+        }
+      }
+    }
+
+    this.isProcessing = false
+  }
+}
+
+const globalAniListQueue = new RequestQueue()
+
 export async function fetchAniList<T>(
   query: string,
   variables: Record<string, any> = {},
@@ -12,40 +51,44 @@ export async function fetchAniList<T>(
   operationName?: string,
 ): Promise<T | null> {
   const effectiveLog = addLog || (() => {})
-  try {
-    const response = await fetch("/api/anilist/search", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        query,
-        variables,
-      }),
-      cache: "no-store",
-    })
+  
+  return globalAniListQueue.add(async () => {
+    try {
+      const response = await fetch("/api/anilist/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          query,
+          variables,
+        }),
+        cache: "no-store",
+      })
 
-    if (!response.ok) {
-      const errorBody = await response.text()
-      const errorMessage = `AniList API request failed: ${response.status} ${errorBody}`
-      effectiveLog(errorMessage, "error", { query, variables })
+      if (!response.ok) {
+        const errorBody = await response.text()
+        // If we still get a 429, we might want to wait longer, but for now just log it
+        const errorMessage = `AniList API request failed: ${response.status} ${errorBody}`
+        effectiveLog(errorMessage, "error", { query, variables })
+        return null
+      }
+
+      const jsonResponse = await response.json()
+
+      if (jsonResponse.errors) {
+        const errorMsg = `GraphQL Error: ${jsonResponse.errors.map((e: any) => e.message).join(", ")}`
+        effectiveLog(errorMsg, "error", { query, variables })
+        return null
+      }
+
+      return jsonResponse.data as T
+    } catch (error) {
+      effectiveLog((error as Error).message, "error", { query, variables })
       return null
     }
-
-    const jsonResponse = await response.json()
-
-    if (jsonResponse.errors) {
-      const errorMsg = `GraphQL Error: ${jsonResponse.errors.map((e: any) => e.message).join(", ")}`
-      effectiveLog(errorMsg, "error", { query, variables })
-      return null
-    }
-
-    return jsonResponse.data as T
-  } catch (error) {
-    effectiveLog((error as Error).message, "error", { query, variables })
-    return null
-  }
+  })
 }
 
 export async function jikanApiRequest(
