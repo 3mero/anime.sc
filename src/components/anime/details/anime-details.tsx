@@ -5,11 +5,25 @@ import { useAuth } from "@/hooks/use-auth"
 import type { Anime } from "@/lib/types"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Star, Tv, Calendar, Tag, Bookmark, Video, Bell } from "lucide-react"
+import { Star, Tv, Calendar, Tag, Bookmark, Video, Bell, Film, Music, Sparkles, BookOpen } from "lucide-react"
 import { useTranslation } from "@/hooks/use-translation"
 import { SceneSearchDialog } from "./scene-search-dialog"
 import { cn } from "@/lib/utils"
 import { ReminderDialog } from "@/components/notifications/reminder-dialog"
+
+const typeIcons: { [key: string]: React.ElementType } = {
+  TV: Tv,
+  MOVIE: Film,
+  OVA: Video,
+  SPECIAL: Sparkles,
+  ONA: Video,
+  MUSIC: Music,
+  PV: Tv,
+  CM: Tv,
+  MANGA: BookOpen,
+  NOVEL: BookOpen,
+  ONE_SHOT: BookOpen,
+}
 
 export const AnimeDetails = ({ anime }: { anime: Anime }) => {
   const isManga =
@@ -55,6 +69,50 @@ export const AnimeDetails = ({ anime }: { anime: Anime }) => {
             className={cn("object-cover")}
             data-ai-hint="anime poster"
           />
+        
+        {/* Top Right Badges: Type, Year, Score */}
+        <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1.5 pointer-events-none">
+          {anime.format && (
+            <div className="flex items-center gap-1.5 bg-primary/95 text-primary-foreground rounded-full px-2.5 py-1 text-[10px] font-bold shadow-lg backdrop-blur-md border border-white/10 uppercase tracking-wider">
+              {(() => {
+                 const typeKey = (anime.format || anime.type || "tv").toUpperCase()
+                 const Icon = typeIcons[typeKey] || Tv
+                 return <Icon className="h-3 w-3" />
+              })()}
+              <span>
+                {t((anime.format || anime.type || "tv").toLowerCase().replace(/ /g, "_").replace(/-/g, "_") === "one_shot" ? "one-shot" : (anime.format || anime.type || "tv").toLowerCase().replace(/ /g, "_").replace(/-/g, "_"))}
+              </span>
+            </div>
+          )}
+          {anime.year && (
+             <div className="flex items-center gap-1.5 bg-black/60 text-white rounded-full px-2.5 py-1 text-[10px] font-bold shadow-lg backdrop-blur-md border border-white/10">
+               <Calendar className="h-3 w-3" />
+               <span>{anime.year}</span>
+             </div>
+          )}
+          {anime.score && anime.score > 0 && (
+            <div className="flex items-center gap-1.5 bg-black/60 text-white rounded-full px-2.5 py-1 text-[10px] font-bold shadow-lg backdrop-blur-md border border-white/10">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              <span>{anime.score.toFixed(1)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Left Badge: Available Episodes */}
+        <div className="absolute bottom-2 left-2 z-20 flex flex-col items-start gap-1 pointer-events-none">
+           {(anime.episodes || anime.chapters || anime.nextAiringEpisode) && (
+              <div className="flex items-center gap-1 bg-black/70 text-white rounded-md px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm border border-white/5 shadow-sm">
+               <span className="text-primary font-bold">{isManga ? "CH" : "EP"}</span>
+               <span>
+                 {anime.nextAiringEpisode
+                   ? `${anime.nextAiringEpisode.episode - 1} / ${anime.episodes || anime.chapters || "?"}`
+                   : `${anime.episodes || anime.chapters || "?"}`}
+               </span>
+              </div>
+           )}
+        </div>
+        
+        <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
         </div>
       </CardHeader>
       <CardContent className="p-4 space-y-3">

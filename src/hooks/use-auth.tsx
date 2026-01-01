@@ -372,17 +372,8 @@ function useAuthCore() {
       if (watched.has(episodeId)) watched.delete(episodeId)
       else watched.add(episodeId)
 
-      const totalEpisodes = anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : anime.episodes
-      const allWatched = totalEpisodes && totalEpisodes > 0 && watched.size >= totalEpisodes
-
       const updates: Partial<ListData> = {
         watchedEpisodes: { ...d.watchedEpisodes, [animeIdStr]: Array.from(watched) },
-      }
-
-      // If all episodes are watched, remove from currently watching and plan to watch
-      if (allWatched) {
-        updates.currentlyWatching = d.currentlyWatching?.filter((id) => id !== anime.id) || []
-        updates.planToWatch = d.planToWatch?.filter((id) => id !== anime.id) || []
       }
 
       return updates
@@ -396,9 +387,6 @@ function useAuthCore() {
       if (read.has(chapterId)) read.delete(chapterId)
       else read.add(chapterId)
 
-      const totalChapters = manga.chapters || manga.volumes
-      const allRead = totalChapters && totalChapters > 0 && read.size >= totalChapters
-
       const updates: Partial<ListData> = {
         readChapters: {
           ...d.readChapters,
@@ -406,11 +394,11 @@ function useAuthCore() {
         },
       }
 
-      // If all chapters are read, remove from currently reading and plan to read
-      if (allRead) {
-        updates.currentlyReading = d.currentlyReading?.filter((id) => id !== manga.id) || []
-        updates.planToRead = d.planToRead?.filter((id) => id !== manga.id) || []
-      }
+      // Logic removed to prevent auto-removal from lists
+      // if (allRead) {
+      //   updates.currentlyReading = d.currentlyReading?.filter((id) => id !== manga.id) || []
+      //   updates.planToRead = d.planToRead?.filter((id) => id !== manga.id) || []
+      // }
 
       return updates
     })
@@ -429,8 +417,8 @@ function useAuthCore() {
     const allIds = Array.from({ length: count }, (_, i) => String(i + 1))
     updateAndPersistListData((d) => ({
       watchedEpisodes: { ...d.watchedEpisodes, [String(anime.id)]: allIds },
-      currentlyWatching: d.currentlyWatching?.filter((id) => id !== anime.id) || [],
-      planToWatch: d.planToWatch?.filter((id) => id !== anime.id) || [],
+      // currentlyWatching: d.currentlyWatching?.filter((id) => id !== anime.id) || [], // Keep in watching
+      // planToWatch: d.planToWatch?.filter((id) => id !== anime.id) || [], // Keep in planned
     }))
   }
 
@@ -448,8 +436,8 @@ function useAuthCore() {
         ...d.readChapters,
         [mangaIdStr]: { read: allChapterIds, lastRead: new Date().toISOString() },
       },
-      currentlyReading: d.currentlyReading?.filter((id) => id !== manga.id) || [],
-      planToRead: d.planToRead?.filter((id) => id !== manga.id) || [],
+      // currentlyReading: d.currentlyReading?.filter((id) => id !== manga.id) || [],
+      // planToRead: d.planToRead?.filter((id) => id !== manga.id) || [],
     }))
   }
 

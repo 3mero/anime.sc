@@ -20,6 +20,11 @@ export const MEDIA_FRAGMENT_CORE = `
   startDate { year month day }
   isAdult
   description(asHtml: false)
+  nextAiringEpisode {
+    episode
+    airingAt
+    timeUntilAiring
+  }
 `
 
 export const MEDIA_FRAGMENT_DETAILS = `

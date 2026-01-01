@@ -182,6 +182,7 @@ export async function getMangaCharacters(
       response?.Media?.characters?.edges.map((edge) => ({
         character: {
           ...edge.node,
+          name: edge.node.name.full,
           mal_id: edge.node.id,
           images: { webp: { image_url: edge.node.image.large }, jpg: { image_url: edge.node.image.large } },
         },

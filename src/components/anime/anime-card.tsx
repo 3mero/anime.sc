@@ -597,6 +597,21 @@ export function AnimeCard({
                 </TooltipProvider>
               )}
 
+              <div className="absolute bottom-2 left-2 z-20 flex flex-col items-start gap-1 pointer-events-none">
+                {/* Episode Progress Badge */}
+                {/* Episode Progress Badge - Available Episodes */}
+                {(anime.episodes || anime.chapters || anime.nextAiringEpisode) && (
+                   <div className="flex items-center gap-1 bg-black/70 text-white rounded-md px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm border border-white/5 shadow-sm">
+                    <span className="text-primary font-bold">{isManga ? "CH" : "EP"}</span>
+                    <span>
+                      {anime.nextAiringEpisode
+                        ? `${anime.nextAiringEpisode.episode - 1} / ${anime.episodes || anime.chapters || "?"}`
+                        : `${anime.episodes || anime.chapters || "?"}`}
+                    </span>
+                   </div>
+                )}
+              </div>
+
               {imageUrl && !imageError ? (
                 <Image
                   src={imageUrl || "/placeholder.svg"}
