@@ -89,6 +89,8 @@ function useAuthCore() {
     lastEtag: null,
   })
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isSignedIn, setIsSignedIn] = useState(false)
+  const [username, setUsername] = useState("")
 
   // --- AUTH STATE LOGIC ---
   useEffect(() => {
@@ -99,13 +101,19 @@ function useAuthCore() {
         if (profile) {
           setAuthMode("local")
           setLocalProfile(profile)
+          setIsSignedIn(true)
+          setUsername(profile.username)
         } else {
           setAuthMode("none")
+          setIsSignedIn(false)
+          setUsername("")
         }
       } catch (error) {
         console.error("Error reading profile from IndexedDB:", error)
         addLog("Error reading profile from IndexedDB.", "error", error)
         setAuthMode("none")
+        setIsSignedIn(false)
+        setUsername("")
       } finally {
         setLoading(false)
       }
@@ -134,6 +142,8 @@ function useAuthCore() {
 
         setAuthMode("local")
         setLocalProfile(profile)
+        setIsSignedIn(true)
+        setUsername(username)
 
         setTimeout(() => {
           window.location.reload()
@@ -150,10 +160,33 @@ function useAuthCore() {
   const signOut = useCallback(async () => {
     setAuthMode("none")
     setLocalProfile(null)
+    setIsSignedIn(false)
+    setUsername("")
+    setListData({
+      planToWatch: [],
+      currentlyWatching: [],
+      watchedEpisodes: {},
+      planToRead: [],
+      currentlyReading: [],
+      readChapters: {},
+      customEpisodeLinks: {},
+      comments: {},
+      notifications: [],
+      notificationsLayout: ["updates", "reminders", "logs"],
+      pinnedNotificationTab: "updates",
+      excludedItems: {},
+      readActivityIds: [],
+      reminders: [],
+      hiddenGenres: SENSITIVE_GENRES,
+      sensitiveContentUnlocked: false,
+      storageQuota: DEFAULT_STORAGE_QUOTA,
+      pinnedNews: [],
+      favoriteNews: [],
+      followedAnimeForNews: [],
+    })
     await clear()
-    toast({ title: "You have been signed out." })
     window.location.href = "/"
-  }, [toast])
+  }, [])
 
   const updateLocalProfile = useCallback(
     async (newProfileData: Partial<LocalProfile>) => {
@@ -906,6 +939,8 @@ function useAuthCore() {
     signInLocally,
     signOut,
     updateLocalProfile,
+    isSignedIn,
+    username,
     // Lists & Media
     listData,
     setListData: updateAndPersistListData,

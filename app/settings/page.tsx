@@ -393,6 +393,10 @@ function DataManagementTab() {
   const handleReset = () => {
     addLog("User initiated data reset.")
     resetLocalData()
+    // Force immediate redirect to home page after reset
+    setTimeout(() => {
+      window.location.href = "/"
+    }, 100)
   }
 
   const handleDeleteReminder = (reminderId: string) => {
@@ -1252,8 +1256,11 @@ export default function SettingsPage() {
   if (authMode === "none") {
     return (
       <main className="container mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
-        <Card className="p-8 max-w-lg w-full text-center">
-          <p className="text-lg mb-6">{t("must_be_logged_in_to_view_settings")}</p>
+        <Card className="p-8 max-w-lg w-full text-center space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold mb-2">{t("must_be_logged_in_to_view_settings")}</h2>
+            <p className="text-muted-foreground mb-6">{t("sign_in_desc_local")}</p>
+          </div>
           <AuthDialog />
         </Card>
       </main>

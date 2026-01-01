@@ -503,14 +503,16 @@ export function AnimeCard({
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-3 w-3" />
-                <span>{anime.year || t("n_a")}</span>
+                <span>{anime.year}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Star className="h-3 w-3" />
-                <span>
-                  {anime.score?.toFixed(2)} ({anime.scored_by?.toLocaleString()} {t("votes")})
-                </span>
-              </div>
+              {anime.score && anime.score > 0 && (
+                <div className="flex items-center gap-2">
+                  <Star className="h-3 w-3" />
+                  <span className="font-medium">
+                    {anime.score.toFixed(2)} ({anime.scored_by?.toLocaleString() || "0"} {t("votes")})
+                  </span>
+                </div>
+              )}
             </div>
 
             <SynopsisDialog synopsis={anime.synopsis} title={anime.title} />
@@ -613,6 +615,23 @@ export function AnimeCard({
                   <Film className="w-12 h-12 text-muted-foreground" />
                 </div>
               )}
+
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8">
+                <div className="flex items-center justify-between text-white text-xs gap-2">
+                  {anime.year && (
+                    <div className="flex items-center gap-1 bg-black/40 rounded px-2 py-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{anime.year}</span>
+                    </div>
+                  )}
+                  {anime.score && anime.score > 0 && (
+                    <div className="flex items-center gap-1 bg-black/40 rounded px-2 py-1">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-xs font-semibold">{anime.score.toFixed(1)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </Link>
             {listType && onRemove && authMode !== "none" && !showDetails && (
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
