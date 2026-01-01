@@ -613,6 +613,19 @@ export interface BroadcastNotification {
   seenAt?: string
 }
 
+export interface UpdateNotification {
+  type: "update"
+  id: string
+  title: string
+  message: string
+  timestamp: string
+  seen: boolean
+  mediaId: number
+  mediaType: string
+  thumbnail?: string
+  isManga: boolean
+}
+
 export type UserNotification =
   | LikeNotification
   | ReplyNotification
@@ -620,6 +633,7 @@ export type UserNotification =
   | ReminderNotification
   | BroadcastNotification
   | StorageNotification
+  | UpdateNotification
 
 // Live Chat
 export interface ChatRoom {

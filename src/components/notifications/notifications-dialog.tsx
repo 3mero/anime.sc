@@ -164,7 +164,7 @@ export function NotificationsDialog({ open, onOpenChange }: { open: boolean; onO
 
   const updateEntries = useMemo(() => {
     const entries = (listData.notifications || [])
-      .filter((n) => n.type === "news" && !n.seen)
+      .filter((n) => (n.type === "news" || n.type === "update") && !n.seen)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
     return entries

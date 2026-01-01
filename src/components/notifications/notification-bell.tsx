@@ -7,7 +7,7 @@ const NotificationBell = () => {
   const { listData } = useAuth()
 
   const unseenNewsCount = useMemo(() => {
-    const newsNotifs = (listData.notifications || []).filter((n) => n.type === "news" && !n.seen)
+    const newsNotifs = (listData.notifications || []).filter((n) => (n.type === "news" || n.type === "update") && !n.seen)
     return newsNotifs.length
   }, [listData.notifications])
 

@@ -36,7 +36,7 @@ export const IDB_LIST_DATA_KEY = "animesync_local_list_data"
 export const IDB_LAYOUT_CONFIG_KEY = "animesync_layout_config"
 export const IDB_TRACKED_MEDIA_KEY = "animesync_tracked_media"
 export const IDB_SHARED_DATA_KEY = "animesync_shared_data_config"
-const UPDATE_INTERVAL = 3 * 60 * 1000
+const UPDATE_INTERVAL = 60 * 60 * 1000 // 1 hour
 const INITIAL_CHECK_DELAY = 10 * 1000
 const DEFAULT_STORAGE_QUOTA = 1 * 1024 * 1024 * 1024 // 1 GB
 
@@ -554,6 +554,8 @@ function useAuthCore() {
         seen: false,
         mediaId: media.id,
         mediaType: media.type,
+        thumbnail: media.images.webp.large_image_url || media.images.jpg.large_image_url,
+        isManga: media.type === "MANGA",
       }
 
       updateAndPersistListData((d) => ({

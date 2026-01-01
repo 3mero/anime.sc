@@ -222,13 +222,37 @@ export async function getMultipleAnimeFromAniList(
   try {
     const listData = await get<ListData>("animesync_local_list_data")
     const hidden = await getHiddenGenres(listData)
-    const response = await fetchAniList<{ Page: { media: AniListMedia[] } }>(
-      MULTIPLE_ANIME_QUERY,
-      { ids: anilistIds, genre_not_in: hidden.genres, tag_not_in: hidden.tags },
-      effectiveLog,
-      "getMultipleAnimeFromAniList",
-    )
-    return response?.Page?.media.map(mapAniListMediaToAnime) || []
+    
+    // Chunk the IDs to avoid 429 errors
+    const chunkSize = 5
+    const chunks = []
+    for (let i = 0; i < anilistIds.length; i += chunkSize) {
+      chunks.push(anilistIds.slice(i, i + chunkSize))
+    }
+
+    const allMedia: AniListMedia[] = []
+    
+    for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i]
+        
+        // Add a delay between chunks if it's not the first one
+        if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+
+        const response = await fetchAniList<{ Page: { media: AniListMedia[] } }>(
+        MULTIPLE_ANIME_QUERY,
+        { ids: chunk, genre_not_in: hidden.genres, tag_not_in: hidden.tags },
+        effectiveLog,
+        `getMultipleAnimeFromAniList_chunk_${i}`,
+        )
+        
+        if (response?.Page?.media) {
+            allMedia.push(...response.Page.media)
+        }
+    }
+
+    return allMedia.map(mapAniListMediaToAnime)
   } catch (error) {
     effectiveLog("Failed to fetch multiple anime", "error", error)
     return []
