@@ -616,22 +616,33 @@ export function AnimeCard({
                 </div>
               )}
 
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8">
-                <div className="flex items-center justify-between text-white text-xs gap-2">
-                  {anime.year && (
-                    <div className="flex items-center gap-1 bg-black/40 rounded px-2 py-1">
-                      <Calendar className="h-3 w-3" />
-                      <span>{anime.year}</span>
-                    </div>
-                  )}
-                  {anime.score && anime.score > 0 && (
-                    <div className="flex items-center gap-1 bg-black/40 rounded px-2 py-1">
-                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      <span className="text-xs font-semibold">{anime.score.toFixed(1)}</span>
-                    </div>
-                  )}
-                </div>
+              <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1.5 pointer-events-none">
+                {/* Type badge */}
+                {anime.format && (
+                  <div className="flex items-center gap-1.5 bg-primary/95 text-primary-foreground rounded-full px-2.5 py-1 text-[10px] font-bold shadow-lg backdrop-blur-md border border-white/10 uppercase tracking-wider">
+                    <TypeIcon className="h-3 w-3" />
+                    <span>{translatedType}</span>
+                  </div>
+                )}
+
+                {/* Year badge */}
+                {anime.year && (
+                  <div className="flex items-center gap-1.5 bg-black/60 text-white rounded-full px-2.5 py-1 text-[10px] font-bold shadow-lg backdrop-blur-md border border-white/10">
+                    <Calendar className="h-3 w-3" />
+                    <span>{anime.year}</span>
+                  </div>
+                )}
+
+                {/* Score badge */}
+                {anime.score && anime.score > 0 && (
+                  <div className="flex items-center gap-1.5 bg-black/60 text-white rounded-full px-2.5 py-1 text-[10px] font-bold shadow-lg backdrop-blur-md border border-white/10">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    <span>{anime.score.toFixed(1)}</span>
+                  </div>
+                )}
               </div>
+
+              <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
             </Link>
             {listType && onRemove && authMode !== "none" && !showDetails && (
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-opacity">

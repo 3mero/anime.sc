@@ -17,9 +17,10 @@ interface CharacterListProps {
   characters: JikanCharacter[] | null
   isLoading: boolean
   error: string | null
+  lang: string
 }
 
-export function CharacterList({ characters, isLoading, error }: CharacterListProps) {
+export function CharacterList({ characters, isLoading, error, lang }: CharacterListProps) {
   const { t } = useTranslation()
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT)
 
@@ -78,6 +79,7 @@ export function CharacterList({ characters, isLoading, error }: CharacterListPro
                     alt={characterName}
                     fill
                     unoptimized
+                    referrerPolicy="no-referrer"
                     className="object-cover"
                     sizes="(max-width: 768px) 33vw, 16vw"
                     data-ai-hint="anime character"

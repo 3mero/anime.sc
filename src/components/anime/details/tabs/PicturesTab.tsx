@@ -25,7 +25,15 @@ export function PicturesTab({ pictures }: { pictures: JikanPicture[] | null }) {
                 <a href={pic.jpg.image_url} target="_blank" rel="noopener noreferrer" key={index}>
                     <Card className="overflow-hidden group">
                         <div className="relative aspect-video">
-                            <Image src={pic.webp?.image_url || pic.jpg.image_url} alt={`Anime Picture ${index + 1}`} fill className="object-cover transition-transform group-hover:scale-110" sizes="(max-width: 768px) 50vw, 25vw" />
+                            <Image
+                                src={pic.webp?.image_url || pic.jpg.image_url}
+                                alt={`Anime Picture ${index + 1}`}
+                                fill
+                                unoptimized
+                                referrerPolicy="no-referrer"
+                                className="object-cover transition-transform group-hover:scale-110"
+                                sizes="(max-width: 768px) 50vw, 25vw"
+                            />
                         </div>
                     </Card>
                 </a>

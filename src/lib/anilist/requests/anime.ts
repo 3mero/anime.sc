@@ -431,3 +431,25 @@ export async function getAnimeVideos(
     return []
   }
 }
+
+export async function getAnimeCharacters(
+  malId: number,
+  addLog?: (message: string, type?: LogEntry["type"], details?: any) => void,
+): Promise<any[]> {
+  const effectiveLog = addLog || (() => {})
+  try {
+    effectiveLog(`Fetching characters from Jikan for MAL ID ${malId}`)
+    const response = await fetch(`https://api.jikan.moe/v4/anime/${malId}/characters`)
+
+    if (!response.ok) {
+      throw new Error(`Jikan API error: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    effectiveLog(`Successfully fetched ${data.data?.length || 0} characters from Jikan`)
+    return data.data || []
+  } catch (e: any) {
+    effectiveLog(`Failed to get characters from Jikan for MAL ID ${malId}: ${e.message}`, "warn")
+    return []
+  }
+}

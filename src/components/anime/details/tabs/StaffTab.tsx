@@ -25,7 +25,7 @@ export function StaffTab({ staff }: { staff: JikanStaff[] | null }) {
                 <Link href={`/person/${s.person.mal_id}`} key={`${s.person.mal_id}-${s.positions[0]}-${index}`}>
                     <Card className="text-center p-3 hover:bg-muted/50 transition-colors group">
                         <div className="relative aspect-square w-24 mx-auto rounded-full overflow-hidden mb-2">
-                             <Image src={s.person.images.jpg.image_url} alt={s.person.name} fill className="object-cover" />
+                             <Image src={s.person.images.jpg.image_url} alt={s.person.name} fill unoptimized referrerPolicy="no-referrer" className="object-cover" />
                         </div>
                         <p className="font-semibold truncate group-hover:text-primary">{s.person.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{s.positions.join(', ')}</p>

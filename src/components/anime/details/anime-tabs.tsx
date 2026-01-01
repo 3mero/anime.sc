@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import type { Anime, JikanCharacter, JikanPicture, JikanReview, JikanStaff, JikanVideo } from "@/lib/types"
-import { getAnimeStaff, getAnimeReviews, getAnimePictures, getAnimeVideos } from "@/lib/anilist"
+import { getAnimeStaff, getAnimeReviews, getAnimePictures, getAnimeVideos, getAnimeCharactersFromAniList } from "@/lib/anilist"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Info, ListVideo, Users, Film, Camera, Tv, UserCog, MessageSquare } from "lucide-react"
 import { useTranslation } from "@/hooks/use-translation"
@@ -18,7 +18,6 @@ import { VideosTab } from "./tabs/VideosTab"
 import { StaffTab } from "./tabs/StaffTab"
 import { ReviewsTab } from "./tabs/ReviewsTab"
 import { Loader2 } from "lucide-react"
-import { getAnimeCharactersFromAniList } from "@/lib/anilist/requests"
 
 function TabLoading() {
   return (
@@ -30,9 +29,9 @@ function TabLoading() {
 
 export function AnimeTabs({ anime }: { anime: Anime }) {
   const { toast } = useToast()
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
   const { addLog } = useLogger()
-  const { listData, toggleEpisodeWatched } = useAuth() // Get listData and the function here
+  const { listData, toggleEpisodeWatched } = useAuth()
 
   const [activeTab, setActiveTab] = useState("synopsis")
 
@@ -63,7 +62,28 @@ export function AnimeTabs({ anime }: { anime: Anime }) {
         setCharacterData((prev) => ({ ...prev, isLoading: true, error: null }))
         try {
           const data = await getAnimeCharactersFromAniList(anilistId, addLog)
-          setCharacterData({ data: data, isLoading: false, error: null })
+          // Map AniList structure to Jikan structure expected by CharacterList
+          const mappedData = data.map((item: any) => ({
+            character: {
+              mal_id: item.character.id,
+              name: item.character.name,
+              images: {
+                jpg: { image_url: item.character.images.large },
+                webp: { image_url: item.character.images.large, small_image_url: item.character.images.large },
+              },
+            },
+            role: item.role,
+            voice_actors: item.voice_actors.map((va: any) => ({
+              person: {
+                mal_id: va.person.id,
+                name: va.person.name,
+                images: {
+                  jpg: { image_url: va.person.images.large },
+                },
+              },
+            })),
+          }))
+          setCharacterData({ data: mappedData, isLoading: false, error: null })
         } catch (e: any) {
           setCharacterData({ data: [], isLoading: false, error: e.message || "Failed to load character data." })
         }
@@ -148,6 +168,7 @@ export function AnimeTabs({ anime }: { anime: Anime }) {
           characters={characterData.data}
           isLoading={characterData.isLoading}
           error={characterData.error}
+          lang={lang}
         />
       </TabsContent>
       <TabsContent value="trailer" className="py-4">

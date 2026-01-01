@@ -35,7 +35,6 @@ const nextConfig = {
     ],
     deviceSizes: [640, 1200],
     imageSizes: [64, 128, 256],
-    unoptimized: true,
   },
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],

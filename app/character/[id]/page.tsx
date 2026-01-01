@@ -153,35 +153,34 @@ export default function CharacterPage() {
   const { addLog } = useLogger()
 
   useEffect(() => {
-    if (!id) {
+    if (!id || id === "0") {
+      addLog(`Invalid character ID: ${id}`, "error")
       notFound()
       return
     }
 
     async function fetchData() {
-      addLog(`Fetching character details from AniList for ID: ${id}`)
+      const malId = Number(id)
       setIsLoading(true)
       setCharacter(null)
       setVoiceActors(null)
       setTranslatedAbout(null)
       setShowTranslation(false)
+
       try {
-        const data = await getCharacterDetails(Number(id), addLog)
-        if (!data) {
-          addLog(`Character with ID ${id} not found.`, "warn")
+        addLog(`Fetching character details from AniList for ID: ${id}`)
+        const anilistData = await getCharacterDetails(malId, addLog)
+
+        if (anilistData) {
+          setCharacter(anilistData)
+          addLog(`Successfully fetched character details for "${anilistData.name.full}"`)
+        } else {
+          addLog(`Character with ID ${id} not found in AniList, may be Jikan-only character`, "warn")
           notFound()
-          return
         }
-        setCharacter(data)
-        addLog(`Successfully fetched character details for "${data.name.full}"`)
       } catch (error) {
         addLog(`Failed to fetch character details for ID ${id}`, "error", { error })
         console.error(`Failed to fetch character details for ID ${id}:`, error)
-        toast({
-          variant: "destructive",
-          title: t("toast_error_title"),
-          description: t("toast_character_load_failed_desc"),
-        })
         notFound()
       } finally {
         setIsLoading(false)

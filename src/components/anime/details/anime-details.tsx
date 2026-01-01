@@ -12,11 +12,24 @@ import { cn } from "@/lib/utils"
 import { ReminderDialog } from "@/components/notifications/reminder-dialog"
 
 export const AnimeDetails = ({ anime }: { anime: Anime }) => {
-  const { authMode, isPlannedToWatch, togglePlanToWatch, isCurrentlyWatching, toggleCurrentlyWatching } = useAuth()
+  const isManga =
+    anime.type === "MANGA" || anime.format === "MANGA" || anime.format === "NOVEL" || anime.format === "ONE_SHOT"
+
+  const {
+    authMode,
+    isPlannedToWatch,
+    togglePlanToWatch,
+    isCurrentlyWatching,
+    toggleCurrentlyWatching,
+    isPlannedToRead,
+    togglePlanToRead,
+    isCurrentlyReading,
+    toggleCurrentlyReading,
+  } = useAuth()
   const { t } = useTranslation()
 
-  const planned = isPlannedToWatch(anime.id)
-  const watching = isCurrentlyWatching(anime.id)
+  const planned = isManga ? isPlannedToRead(anime.id) : isPlannedToWatch(anime.id)
+  const currentlyActive = isManga ? isCurrentlyReading(anime.id) : isCurrentlyWatching(anime.id)
 
   const translatedStatus = t(anime.status.toLowerCase().replace(/ /g, "_").replace(/-/g, "_") || "unknown")
 
@@ -59,21 +72,27 @@ export const AnimeDetails = ({ anime }: { anime: Anime }) => {
           {authMode !== "none" && (
             <Button
               className="w-full flex-wrap"
-              variant={watching ? "secondary" : "outline"}
-              onClick={() => toggleCurrentlyWatching(anime)}
+              variant={currentlyActive ? "secondary" : "outline"}
+              onClick={() => (isManga ? toggleCurrentlyReading(anime) : toggleCurrentlyWatching(anime))}
             >
-              <Video className={cn(watching ? "text-green-400" : "text-muted-foreground")} />
-              {watching ? t("watching") : t("currently_watching")}
+              <Video className={cn(currentlyActive ? "text-green-400" : "text-muted-foreground")} />
+              {currentlyActive
+                ? isManga
+                  ? t("reading")
+                  : t("watching")
+                : isManga
+                  ? t("currently_reading")
+                  : t("currently_watching")}
             </Button>
           )}
           {authMode !== "none" && (
             <Button
               className="w-full flex-wrap"
               variant={planned ? "secondary" : "outline"}
-              onClick={() => togglePlanToWatch(anime)}
+              onClick={() => (isManga ? togglePlanToRead(anime) : togglePlanToWatch(anime))}
             >
               <Bookmark className={cn(planned ? "text-yellow-400" : "text-muted-foreground")} />
-              {planned ? t("planned") : t("plan_to_watch_btn")}
+              {planned ? t("planned") : isManga ? t("plan_to_read_btn") : t("plan_to_watch_btn")}
             </Button>
           )}
           {anime.id && <SceneSearchDialog animeId={anime.id} animeTitle={anime.title} posterImage={posterImage} />}
@@ -90,7 +109,8 @@ export const AnimeDetails = ({ anime }: { anime: Anime }) => {
         <div className="flex items-center gap-2 text-sm">
           <Tv className="w-4 h-4 text-muted-foreground" />
           <span>
-            {translatedType} &bull; {anime.episodes || n_a} {t("episodes_count")}
+            {translatedType} &bull; {isManga ? anime.chapters || n_a : anime.episodes || n_a}{" "}
+            {isManga ? t("chapters_count") : t("episodes_count")}
           </span>
         </div>
         <div className="flex items-center gap-2 text-sm">

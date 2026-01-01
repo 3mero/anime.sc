@@ -8,9 +8,10 @@ interface CharactersTabProps {
   characters: JikanCharacter[] | null
   isLoading: boolean
   error: string | null
+  lang: string
 }
 
-export function CharactersTab({ characters, isLoading, error }: CharactersTabProps) {
+export function CharactersTab({ characters, isLoading, error, lang }: CharactersTabProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -18,5 +19,5 @@ export function CharactersTab({ characters, isLoading, error }: CharactersTabPro
       </div>
     )
   }
-  return <CharacterList characters={characters} isLoading={isLoading} error={error} />
+  return <CharacterList characters={characters} isLoading={isLoading} error={error} lang={lang} />
 }
