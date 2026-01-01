@@ -29,7 +29,7 @@ function TabLoading() {
 
 export function MangaTabs({ manga }: { manga: Anime }) {
   const { toast } = useToast()
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
   const { addLog } = useLogger()
   const { listData } = useAuth()
 
@@ -143,6 +143,7 @@ export function MangaTabs({ manga }: { manga: Anime }) {
           characters={characterData.data}
           isLoading={characterData.isLoading}
           error={characterData.error}
+          lang={lang}
         />
       </TabsContent>
       <TabsContent value="pictures" className="py-4">
