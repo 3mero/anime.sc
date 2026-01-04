@@ -1,16 +1,51 @@
-import type { AniListMedia, Anime, JikanRelation } from "../types"
-import { genres_list } from "@/i18n"
+import type { Anime, AniListMedia, JikanRelation } from "@/lib/types"
 import type { LogEntry } from "@/hooks/use-logger"
+import { genres_list } from "@/i18n"
 
 export const ANILIST_API_URL = "https://graphql.anilist.co"
 export const JIKAN_API_URL = "https://api.jikan.moe/v4"
 
-class RequestQueue {
-  private queue: (() => Promise<void>)[] = []
-  private isProcessing = false
-  private delay = 600 // 600ms delay between requests
+// Keep track of active requests to prevent duplicates
+type PendingRequest<T> = {
+  promise: Promise<T | null>
+  timestamp: number
+}
 
-  add<T>(fn: () => Promise<T>): Promise<T> {
+const pendingRequests = new Map<string, PendingRequest<any>>()
+const CACHE_DURATION = 5000 // 5 seconds - requests with same params within this time are deduplicated
+
+// Simple hash function for strings
+function simpleHash(str: string): string {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32bit integer
+  }
+  return hash.toString(36)
+}
+
+// Helper to create a unique key for a request
+function getRequestKey(query: string, variables: Record<string, any>): string {
+  // Sort variables keys to ensure consistent ordering
+  const sortedVariables = Object.keys(variables).sort().reduce((acc, key) => {
+    acc[key] = variables[key]
+    return acc
+  }, {} as Record<string, any>)
+  
+  const queryHash = simpleHash(query)
+  const variablesStr = JSON.stringify(sortedVariables)
+  return `${queryHash}_${variablesStr}`
+}
+
+// Rate limiting queue
+class RequestQueue {
+  private queue: Array<() => Promise<any>> = []
+  private processing = false
+  private lastRequestTime = 0
+  private readonly minDelay = 2000 // Increased to 2000ms for maximum safety
+
+  async add<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
       this.queue.push(async () => {
         try {
@@ -20,25 +55,35 @@ class RequestQueue {
           reject(error)
         }
       })
-      this.process()
+
+      if (!this.processing) {
+        this.processQueue()
+      }
     })
   }
 
-  private async process() {
-    if (this.isProcessing) return
-    this.isProcessing = true
-
-    while (this.queue.length > 0) {
-      const task = this.queue.shift()
-      if (task) {
-        await task()
-        if (this.queue.length > 0) {
-          await new Promise((resolve) => setTimeout(resolve, this.delay))
-        }
-      }
+  private async processQueue() {
+    if (this.queue.length === 0) {
+      this.processing = false
+      return
     }
 
-    this.isProcessing = false
+    this.processing = true
+    const fn = this.queue.shift()
+
+    if (fn) {
+      const now = Date.now()
+      const timeSinceLastRequest = now - this.lastRequestTime
+      if (timeSinceLastRequest < this.minDelay) {
+        await new Promise((resolve) => setTimeout(resolve, this.minDelay - timeSinceLastRequest))
+      }
+
+      this.lastRequestTime = Date.now()
+      await fn()
+    }
+
+    // Process next item
+    this.processQueue()
   }
 }
 
@@ -52,43 +97,132 @@ export async function fetchAniList<T>(
 ): Promise<T | null> {
   const effectiveLog = addLog || (() => {})
   
-  return globalAniListQueue.add(async () => {
-    try {
-      const response = await fetch("/api/anilist/search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          query,
-          variables,
-        }),
-        cache: "no-store",
-      })
-
-      if (!response.ok) {
-        const errorBody = await response.text()
-        // If we still get a 429, we might want to wait longer, but for now just log it
-        const errorMessage = `AniList API request failed: ${response.status} ${errorBody}`
-        effectiveLog(errorMessage, "error", { query, variables })
-        return null
-      }
-
-      const jsonResponse = await response.json()
-
-      if (jsonResponse.errors) {
-        const errorMsg = `GraphQL Error: ${jsonResponse.errors.map((e: any) => e.message).join(", ")}`
-        effectiveLog(errorMsg, "error", { query, variables })
-        return null
-      }
-
-      return jsonResponse.data as T
-    } catch (error) {
-      effectiveLog((error as Error).message, "error", { query, variables })
-      return null
+  // Check if we have a pending request with the same parameters
+  const requestKey = getRequestKey(query, variables)
+  const now = Date.now()
+  
+  // Clean up old cached requests
+  for (const [key, pending] of pendingRequests.entries()) {
+    if (now - pending.timestamp > CACHE_DURATION) {
+      pendingRequests.delete(key)
     }
+  }
+  
+  // If we have a pending request with same params, return that promise
+  const existing = pendingRequests.get(requestKey)
+  if (existing) {
+    effectiveLog(`[Dedup] Reusing existing request for ${operationName || 'query'}`, "info")
+    return existing.promise as Promise<T | null>
+  }
+  
+  // Create new request
+  const requestPromise = globalAniListQueue.add(async () => {
+    const MAX_RETRIES = 2 // Client-side retries (API route also has retries)
+    let lastError: any = null
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await fetch("/api/anilist/search", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            query,
+            variables,
+          }),
+          cache: "no-store",
+        })
+
+        if (!response.ok) {
+          const errorBody = await response.text()
+          
+          // If still rate limited after API retries, wait longer before client retry
+          if (response.status === 429 && attempt < MAX_RETRIES) {
+            const backoffDelay = Math.pow(2, attempt) * 2000 // 2s, 4s
+            effectiveLog(
+              `Rate limit encountered, retrying in ${backoffDelay}ms (attempt ${attempt + 1}/${MAX_RETRIES + 1})`,
+              "warn",
+              { query, variables }
+            )
+            await new Promise((resolve) => setTimeout(resolve, backoffDelay))
+            continue
+          }
+
+          // Enhanced error logging for 500 errors with query details
+          const errorMessage = `AniList API request failed: ${response.status} ${errorBody}`
+          const errorDetails: any = { 
+            status: response.status,
+            attempts: attempt + 1,
+            errorBody
+          }
+          
+          // For 500 errors, log the variables to help debug malformed requests
+          if (response.status === 500) {
+            errorDetails.variables = variables
+            errorDetails.operationName = operationName
+            effectiveLog(
+              `[500 Error] Possible malformed request - check variables`,
+              "error",
+              errorDetails
+            )
+          } else {
+            effectiveLog(errorMessage, "error", { query, variables, attempts: attempt + 1 })
+          }
+          
+          // Remove from pending and return null
+          pendingRequests.delete(requestKey)
+          return null
+        }
+
+        const jsonResponse = await response.json()
+
+        if (jsonResponse.errors) {
+          const errorMsg = `GraphQL Error: ${jsonResponse.errors.map((e: any) => e.message).join(", ")}`
+          effectiveLog(errorMsg, "error", jsonResponse.errors)
+          lastError = errorMsg
+          continue
+        }
+
+        if (attempt > 0) {
+          effectiveLog(`Request succeeded after ${attempt} client-side retries`, "info")
+        }
+
+        // Success - remove from pending and return  
+        pendingRequests.delete(requestKey)
+        return jsonResponse.data as T
+      } catch (error) {
+        lastError = error
+
+        // If error is not network-related or this is the last attempt, throw
+        if (attempt < MAX_RETRIES) {
+          const backoffDelay = Math.pow(2, attempt) * 1000
+          effectiveLog(
+            `Request error, retrying in ${backoffDelay}ms: ${(error as Error).message}`,
+            "warn"
+          )
+          await new Promise((resolve) => setTimeout(resolve, backoffDelay))
+        }
+      }
+    }
+
+    // If we get here,all retries failed
+    const finalError = lastError instanceof Error ? lastError.message : String(lastError)
+    effectiveLog(`AniList request failed after ${MAX_RETRIES + 1} attempts: ${finalError}`, "error")
+    
+    // Remove from pending
+    pendingRequests.delete(requestKey)
+    return null
   })
+  
+  // Cache the promise
+  pendingRequests.set(requestKey, {
+    promise: requestPromise,
+    timestamp: now
+  })
+  
+  return requestPromise
 }
 
 export async function jikanApiRequest(

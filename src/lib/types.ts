@@ -749,6 +749,7 @@ export interface ListData {
   favoriteNews?: JikanNewsArticle[]
   followedAnimeForNews?: FollowedAnimeForNews[]
   layoutConfig?: LayoutConfigItem[]
+  lastNotifiedEpisodeCount?: Record<number, number> // mediaId -> episode/chapter count
 }
 
 export interface LayoutConfigItem {

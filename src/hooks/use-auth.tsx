@@ -545,22 +545,44 @@ function useAuthCore() {
 
   const addInteraction = useCallback(
     (media: Anime, diff: number) => {
-      const newNotification: any = {
-        id: uuidv4(),
-        type: "update" as const,
-        title: media.title_english || media.title,
-        message: `New ${media.type === "MANGA" ? "chapters" : "episodes"} available: ${diff} new`,
-        timestamp: new Date().toISOString(),
-        seen: false,
-        mediaId: media.id,
-        mediaType: media.type,
-        thumbnail: media.images.webp.large_image_url || media.images.jpg.large_image_url,
-        isManga: media.type === "MANGA",
-      }
+      updateAndPersistListData((d) => {
+        // Check if notification already exists for this media and update
+        const existingIndex = (d.notifications || []).findIndex(
+          (n) => 
+            (n.type === "update" || n.type === "news") && 
+            (n as any).mediaId === media.id && 
+            !n.seen
+        )
 
-      updateAndPersistListData((d) => ({
-        notifications: [...(d.notifications || []), newNotification],
-      }))
+        // If exists and unseen, update it instead of creating duplicate
+        if (existingIndex !== -1) {
+          const updated = [...(d.notifications || [])]
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            message: `New ${media.type === "MANGA" ? "chapters" : "episodes"} available: ${diff} new`,
+            timestamp: new Date().toISOString(),
+          } as any
+          return { notifications: updated }
+        }
+
+        // Create new notification
+        const newNotification: any = {
+          id: uuidv4(),
+          type: "update" as const,
+          title: media.title_english || media.title,
+          message: `New ${media.type === "MANGA" ? "chapters" : "episodes"} available: ${diff} new`,
+          timestamp: new Date().toISOString(),
+          seen: false,
+          mediaId: media.id,
+          mediaType: media.type,
+          thumbnail: media.images.webp.large_image_url || media.images.jpg.large_image_url,
+          isManga: media.type === "MANGA",
+        }
+
+        return {
+          notifications: [...(d.notifications || []), newNotification],
+        }
+      })
     },
     [updateAndPersistListData],
   )
@@ -577,6 +599,7 @@ function useAuthCore() {
 
       let newEpisodesCount = 0
       const newUpdates: any[] = []
+      const updatedNotifiedCounts: Record<number, number> = { ...(listData.lastNotifiedEpisodeCount || {}) }
 
       setTrackedMedia((prevTracked) => {
         const updatedTracked = [...prevTracked]
@@ -591,9 +614,18 @@ function useAuthCore() {
             const diff = newCount - oldCount
 
             if (diff > 0) {
-              newEpisodesCount += diff
-              newUpdates.push({ media: latestMedia, diff })
-              addInteraction(latestMedia, diff)
+              // Check if we already notified about this count
+              const lastNotifiedCount = listData.lastNotifiedEpisodeCount?.[latestMedia.id] || 0
+              
+              // Only create notification if this is a NEW update (not previously notified)
+              if (newCount > lastNotifiedCount) {
+                newEpisodesCount += diff
+                newUpdates.push({ media: latestMedia, diff })
+                addInteraction(latestMedia, diff)
+                
+                // Track that we've notified about this count
+                updatedNotifiedCounts[latestMedia.id] = newCount
+              }
 
               const { synopsis, ...rest } = latestMedia
               updatedTracked[trackedIndex] = { ...rest, synopsis: "" }
@@ -611,11 +643,16 @@ function useAuthCore() {
         return updatedTracked
       })
 
+      // Update the lastNotifiedEpisodeCount in listData
+      if (Object.keys(updatedNotifiedCounts).length > 0) {
+        updateAndPersistListData(() => ({ lastNotifiedEpisodeCount: updatedNotifiedCounts }))
+      }
+
       setUpdates(newUpdates)
     } catch (error) {
       addLog("Error checking for updates", "error", error)
     }
-  }, [listData.currentlyWatching, listData.currentlyReading, addLog, addInteraction])
+  }, [listData.currentlyWatching, listData.currentlyReading, listData.lastNotifiedEpisodeCount, addLog, addInteraction, updateAndPersistListData])
 
   const runChecks = useCallback(async () => {
     if (isCheckingForUpdates) return
@@ -642,6 +679,16 @@ function useAuthCore() {
   const markAllInteractionsAsRead = () =>
     updateAndPersistListData((d) => ({
       notifications: d.notifications?.map((n) => ({ ...n, seen: true, seenAt: new Date().toISOString() })) || [],
+    }))
+  
+  const deleteUpdateNotification = (id: string) =>
+    updateAndPersistListData((d) => ({
+      notifications: d.notifications?.filter((n) => n.id !== id) || [],
+    }))
+  
+  const deleteAllSeenUpdates = () =>
+    updateAndPersistListData((d) => ({
+      notifications: d.notifications?.filter((n) => !(n.type === "update" || n.type === "news") || !n.seen) || [],
     }))
 
   // --- REMINDERS LOGIC ---
@@ -968,6 +1015,8 @@ function useAuthCore() {
     addInteraction,
     markInteractionAsRead,
     markAllInteractionsAsRead,
+    deleteUpdateNotification,
+    deleteAllSeenUpdates,
     markActivityAsRead,
     markAllActivitiesAsRead,
     // Reminders

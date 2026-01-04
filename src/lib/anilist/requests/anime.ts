@@ -17,6 +17,8 @@ import {
   TOP_THIS_SEASON_QUERY,
   UPCOMING_QUERY,
   HOME_PAGE_QUERY,
+  HOME_PAGE_PRIMARY_QUERY,
+  HOME_PAGE_SECONDARY_QUERY,
   STAFF_QUERY,
   REVIEWS_QUERY,
   PICTURES_QUERY,
@@ -29,6 +31,15 @@ import { fetchAniList, mapAniListMediaToAnime } from "../utils"
 import { get } from "../../idb-keyval"
 import { genres_list } from "@/i18n"
 import { SENSITIVE_GENRES } from "@/lib/config"
+
+/**
+ * Helper function to ensure a value is a valid array of strings
+ */
+function ensureStringArray(value: any): string[] {
+  if (!value) return []
+  if (!Array.isArray(value)) return []
+  return value.filter((item) => typeof item === "string")
+}
 
 function getCurrentSeason() {
   const month = new Date().getMonth()
@@ -49,7 +60,8 @@ async function getHiddenGenres(listData?: ListData | null): Promise<{ genres: st
     }
 
     if (data) {
-      const userHidden = data.hiddenGenres || []
+      // Ensure userHidden is a valid string array
+      const userHidden = ensureStringArray(data.hiddenGenres)
       if (data.sensitiveContentUnlocked) {
         finalHidden = userHidden
       } else {
@@ -60,8 +72,11 @@ async function getHiddenGenres(listData?: ListData | null): Promise<{ genres: st
     console.error("Could not get hidden genres from IDB, defaulting to SENSITIVE_GENRES", e)
   }
 
+  // Defensive check: ensure finalHidden is a valid array
+  finalHidden = ensureStringArray(finalHidden)
+
   const allGenreNames = new Set(genres_list.map((g) => g.name))
-  const validHidden = (finalHidden as any[]).filter((g) => allGenreNames.has(g))
+  const validHidden = finalHidden.filter((g) => typeof g === "string" && allGenreNames.has(g as any))
 
   const hiddenGenres = validHidden.filter((name) => genres_list.find((g) => g.name === name)?.type === "genre")
   const hiddenTags = validHidden.filter((name) => genres_list.find((g) => g.name === name)?.type === "tag")
@@ -173,8 +188,11 @@ export async function getTopThisSeason(
   return paginatedRequest(TOP_THIS_SEASON_QUERY, variables, addLog)
 }
 
+
+
 export async function getHomePageData(
   addLog?: (message: string, type?: LogEntry["type"], details?: any) => void,
+  fetchSecondary: boolean = false,
 ): Promise<Record<string, Anime[]>> {
   const effectiveLog = addLog || (() => {})
   try {
@@ -188,11 +206,14 @@ export async function getHomePageData(
       tag_not_in: hidden.tags,
     }
 
+    const query = fetchSecondary ? HOME_PAGE_SECONDARY_QUERY : HOME_PAGE_PRIMARY_QUERY
+    const operationName = fetchSecondary ? "getHomePageData_Secondary" : "getHomePageData_Primary"
+
     const response = await fetchAniList<Record<string, { media: AniListMedia[] }>>(
-      HOME_PAGE_QUERY,
+      query,
       variables,
       effectiveLog,
-      "getHomePageData",
+      operationName,
     )
 
     if (!response) {
@@ -207,7 +228,7 @@ export async function getHomePageData(
     }
     return mappedData
   } catch (error) {
-    effectiveLog("Failed to fetch home page data", "error", error)
+    effectiveLog(`Failed to fetch home page data (secondary: ${fetchSecondary})`, "error", error)
     return {}
   }
 }
@@ -220,11 +241,9 @@ export async function getMultipleAnimeFromAniList(
   if (anilistIds.length === 0) return []
 
   try {
-    const listData = await get<ListData>("animesync_local_list_data")
-    const hidden = await getHiddenGenres(listData)
-    
     // Chunk the IDs to avoid 429 errors
-    const chunkSize = 5
+    // Ultra-conservative: 2 IDs per request to guarantee no rate limiting
+    const chunkSize = 2
     const chunks = []
     for (let i = 0; i < anilistIds.length; i += chunkSize) {
       chunks.push(anilistIds.slice(i, i + chunkSize))
@@ -236,13 +255,16 @@ export async function getMultipleAnimeFromAniList(
         const chunk = chunks[i]
         
         // Add a delay between chunks if it's not the first one
+        // Maximum delay: 3500ms to ensure we never hit rate limits
         if (i > 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            await new Promise(resolve => setTimeout(resolve, 3500))
         }
 
+        // Note: genre_not_in and tag_not_in are NOT supported when querying by IDs
+        // AniList API only supports these filters in search queries, not direct ID lookups
         const response = await fetchAniList<{ Page: { media: AniListMedia[] } }>(
         MULTIPLE_ANIME_QUERY,
-        { ids: chunk, genre_not_in: hidden.genres, tag_not_in: hidden.tags },
+        { ids: chunk },
         effectiveLog,
         `getMultipleAnimeFromAniList_chunk_${i}`,
         )
@@ -265,11 +287,11 @@ export async function getMediaByAniListId(
 ): Promise<Anime | null> {
   const effectiveLog = addLog || (() => {})
   try {
-    const listData = await get<ListData>("animesync_local_list_data")
-    const hidden = await getHiddenGenres(listData)
+    // Note: genre_not_in and tag_not_in are NOT supported when querying by ID
+    // AniList API only supports these filters in search queries, not direct ID lookups
     const response = await fetchAniList<{ Media: AniListMedia }>(
       MEDIA_BY_ID_QUERY,
-      { id: anilistId, genre_not_in: hidden.genres, tag_not_in: hidden.tags },
+      { id: anilistId },
       effectiveLog,
       `getMediaByAniListId-${anilistId}`,
     )

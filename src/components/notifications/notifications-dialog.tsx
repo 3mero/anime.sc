@@ -39,12 +39,16 @@ interface UpdateNotificationItemProps {
   onMarkAsSeen: (id: string) => void
 }
 
-function UpdateNotificationItem({ notification, onMarkAsSeen }: UpdateNotificationItemProps) {
+function UpdateNotificationItem({ notification, onMarkAsSeen, onDelete }: UpdateNotificationItemProps & { onDelete?: (id: string) => void }) {
   const { t } = useTranslation()
   const link = `/${notification.isManga ? "manga" : "anime"}/${notification.mediaId}`
+  const isSeen = notification.seen
 
   return (
-    <div className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted">
+    <div className={cn(
+      "flex items-center gap-4 p-2 rounded-lg hover:bg-muted transition-opacity",
+      isSeen && "opacity-60"
+    )}>
       <Link href={link} className="flex-shrink-0">
         <div className="relative w-16 h-24 rounded-md overflow-hidden">
           <Image
@@ -57,22 +61,39 @@ function UpdateNotificationItem({ notification, onMarkAsSeen }: UpdateNotificati
       </Link>
       <div className="flex-grow min-w-0">
         <Link href={link}>
-          <p className="font-semibold hover:text-primary line-clamp-2">{notification.title}</p>
+          <p className={cn(
+            "font-semibold hover:text-primary line-clamp-2",
+            isSeen && "line-through text-muted-foreground"
+          )}>{notification.title}</p>
         </Link>
         <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
           {notification.isManga ? <BookOpen className="w-4 h-4" /> : <Tv className="w-4 h-4" />}
-          <span>{notification.message}</span>
+          <span className={cn(isSeen && "line-through")}>{notification.message}</span>
         </div>
       </div>
-      <Button
-        size="sm"
-        variant="outline"
-        className="flex-shrink-0 bg-transparent"
-        onClick={() => onMarkAsSeen(notification.id)}
-      >
-        <Check className="w-4 h-4 md:mr-2" />
-        <span className="hidden md:inline">{notification.isManga ? t("read_verb") : t("watched_verb")}</span>
-      </Button>
+      <div className="flex gap-2 flex-shrink-0">
+        {!isSeen && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-transparent"
+            onClick={() => onMarkAsSeen(notification.id)}
+          >
+            <Check className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">{notification.isManga ? t("read_verb") : t("watched_verb")}</span>
+          </Button>
+        )}
+        {onDelete && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => onDelete(notification.id)}
+          >
+            <span className="text-xs">✕</span>
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
@@ -129,6 +150,8 @@ export function NotificationsDialog({ open, onOpenChange }: { open: boolean; onO
     deleteReminder,
     markReminderAsSeen,
     markAllRemindersAsSeen,
+    deleteUpdateNotification,
+    deleteAllSeenUpdates,
   } = useAuth()
   const { logs } = useLogger()
   const { t, lang } = useTranslation()
@@ -164,11 +187,24 @@ export function NotificationsDialog({ open, onOpenChange }: { open: boolean; onO
 
   const updateEntries = useMemo(() => {
     const entries = (listData.notifications || [])
-      .filter((n) => (n.type === "news" || n.type === "update") && !n.seen)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .filter((n) => n.type === "news" || n.type === "update")
+      .sort((a, b) => {
+        // Priority 1: Currently watching/reading media first
+        const aIsTracked = trackedMedia.includes((a as any).mediaId)
+        const bIsTracked = trackedMedia.includes((b as any).mediaId)
+        if (aIsTracked && !bIsTracked) return -1
+        if (!aIsTracked && bIsTracked) return 1
+        
+        // Priority 2: Unseen before seen
+        if (!a.seen && b.seen) return -1
+        if (a.seen && !b.seen) return 1
+        
+        // Priority 3: Latest first
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      })
 
     return entries
-  }, [listData.notifications])
+  }, [listData.notifications, trackedMedia])
 
   const reminderNotifications = useMemo(() => {
     const reminderNotifs = (listData.notifications || [])
@@ -187,16 +223,21 @@ export function NotificationsDialog({ open, onOpenChange }: { open: boolean; onO
     return reminderNotifs
   }, [listData.notifications, reminders])
 
+
   const errorCount = useMemo(() => {
     const count = logs.filter((log) => log.type === "error").length
     return count
   }, [logs])
 
-  const totalUpdates = updateEntries.length
+  const totalUpdates = useMemo(
+    () => updateEntries.filter((entry) => !entry.seen).length,
+    [updateEntries],
+  )
   const totalUnseenReminders = useMemo(
     () => reminderNotifications.filter((r) => !r.seen).length,
     [reminderNotifications],
   )
+
 
   const getCountForTab = (key: NotificationsLayoutKey): number => {
     if (key === "updates") return totalUpdates
@@ -278,6 +319,7 @@ export function NotificationsDialog({ open, onOpenChange }: { open: boolean; onO
                     key={notification.id}
                     notification={notification as NewsNotification}
                     onMarkAsSeen={markInteractionAsRead}
+                    onDelete={deleteUpdateNotification}
                   />
                 ))}
               </div>
@@ -291,9 +333,12 @@ export function NotificationsDialog({ open, onOpenChange }: { open: boolean; onO
           </ScrollArea>
         </div>
         {updateEntries.length > 0 && (
-          <div className="flex-shrink-0 pt-4 border-t">
-            <Button onClick={markAllInteractionsAsRead} className="w-full">
+          <div className="flex-shrink-0 pt-4 border-t flex gap-2">
+            <Button onClick={markAllInteractionsAsRead} className="flex-1">
               {t("mark_all_as_seen")}
+            </Button>
+            <Button onClick={deleteAllSeenUpdates} variant="outline" className="flex-1">
+              {t(lang === "ar" ? "حذف المقروءة" : "Delete Read")}
             </Button>
           </div>
         )}

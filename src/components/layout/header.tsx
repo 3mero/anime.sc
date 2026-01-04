@@ -88,8 +88,8 @@ function NotificationBell({ onClick }: { onClick: () => void }) {
   const safeNotifications = useMemo(() => notifications || [], [notifications])
   const safeLogs = useMemo(() => logs || [], [logs])
 
-  const unseenNews = useMemo(() => {
-    return safeNotifications.filter((n) => n.type === "news" && !n.seen).length
+  const unseenUpdates = useMemo(() => {
+    return safeNotifications.filter((n) => (n.type === "news" || n.type === "update") && !n.seen).length
   }, [safeNotifications])
 
   const unseenReminders = useMemo(() => {
@@ -100,9 +100,9 @@ function NotificationBell({ onClick }: { onClick: () => void }) {
     return safeLogs.filter((l) => l.type === "error").length
   }, [safeLogs])
 
-  const totalUnread = unseenNews + unseenReminders + unseenErrors
+  const totalUnread = unseenUpdates + unseenReminders + unseenErrors
 
-  const hasMultipleTypes = [unseenNews > 0, unseenReminders > 0, unseenErrors > 0].filter(Boolean).length > 1
+  const hasMultipleTypes = [unseenUpdates > 0, unseenReminders > 0, unseenErrors > 0].filter(Boolean).length > 1
 
   let badgeColor = "bg-primary"
   let badgeAnimation = ""
@@ -114,7 +114,7 @@ function NotificationBell({ onClick }: { onClick: () => void }) {
     badgeColor = "bg-red-500"
   } else if (unseenReminders > 0) {
     badgeColor = "bg-violet-500"
-  } else if (unseenNews > 0) {
+  } else if (unseenUpdates > 0) {
     badgeColor = "bg-yellow-500"
   }
 

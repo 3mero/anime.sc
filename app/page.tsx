@@ -60,18 +60,38 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const [username, setUsername] = useState("")
   const [loading, setLoading] = useState(false)
+  const [showAllSections, setShowAllSections] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const visibleLayout = useMemo(() => layoutConfig.filter((item: LayoutConfigItem) => item.visible), [layoutConfig])
+
+  // Define which sections are \"primary\" (always visible)
+  const primarySections = ["latestAdditions", "airing", "releasingManga"]
+
+  // Filter sections based on showAllSections state
+  const displayedLayout = useMemo(() => {
+    if (showAllSections) {
+      return visibleLayout
+    }
+    // Show only primary sections if not expanded
+    return visibleLayout.filter((item: LayoutConfigItem) =>
+      primarySections.includes(item.id)
+    )
+  }, [visibleLayout, showAllSections])
+
+  const hiddenSectionsCount = visibleLayout.length - displayedLayout.length
+
+  // Fetch primary data on mount
   useEffect(() => {
     if (authMode !== "none") {
       setIsLoading(true)
-      getHomePageData(addLog)
+      getHomePageData(addLog, false) // Fetch only primary data
         .then((data) => {
-          setHomePageData(data)
+          setHomePageData(prev => ({ ...prev, ...data }))
           setIsLoading(false)
         })
         .catch((err) => {
-          addLog("Failed to fetch home page data", "error", err)
+          addLog("Failed to fetch primary home page data", "error", err)
           setIsLoading(false)
         })
     } else {
@@ -79,7 +99,21 @@ export default function Home() {
     }
   }, [authMode, addLog])
 
-  const visibleLayout = useMemo(() => layoutConfig.filter((item: LayoutConfigItem) => item.visible), [layoutConfig])
+  // Function to load secondary data when "Show More" is clicked
+  const handleShowMore = () => {
+    setShowAllSections(true)
+    setIsLoading(true) // Show global loading or just let skeletons show
+
+    getHomePageData(addLog, true) // Fetch secondary data
+      .then((data) => {
+        setHomePageData(prev => ({ ...prev, ...data }))
+        setIsLoading(false)
+      })
+      .catch((err) => {
+        addLog("Failed to fetch secondary home page data", "error", err)
+        setIsLoading(false)
+      })
+  }
 
   const handleLocalSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -180,7 +214,7 @@ export default function Home() {
         <WatchingList />
         <ReadingList />
 
-        {visibleLayout.map((item: LayoutConfigItem) => {
+        {displayedLayout.map((item: LayoutConfigItem) => {
           const Icon = listIcons[item.id] || Star
           const title = item.customTitle || t(item.titleKey as any)
           const animes = homePageData[item.id]
@@ -191,6 +225,21 @@ export default function Home() {
             </Suspense>
           )
         })}
+
+        {/* Show More Button */}
+        {!showAllSections && hiddenSectionsCount > 0 && (
+          <div className="flex justify-center py-8">
+            <Button
+              onClick={handleShowMore}
+              variant="outline"
+              size="lg"
+              className="gap-2"
+            >
+              <PlusCircle className="h-5 w-5" />
+              {t("show_more_sections")} ({hiddenSectionsCount})
+            </Button>
+          </div>
+        )}
       </main>
     </>
   )

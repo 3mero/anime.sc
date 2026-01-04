@@ -6,6 +6,15 @@ import { get } from "../../idb-keyval"
 import { genres_list } from "@/i18n"
 import { SENSITIVE_GENRES } from "@/lib/config"
 
+/**
+ * Helper function to ensure a value is a valid array of strings
+ */
+function ensureStringArray(value: any): string[] {
+  if (!value) return []
+  if (!Array.isArray(value)) return []
+  return value.filter((item) => typeof item === "string")
+}
+
 async function getHiddenGenres(listData?: ListData | null): Promise<{ genres: string[]; tags: string[] }> {
   const SENSITIVE_GENRES_INTERNAL = SENSITIVE_GENRES
   let finalHidden: string[] = SENSITIVE_GENRES_INTERNAL
@@ -17,7 +26,8 @@ async function getHiddenGenres(listData?: ListData | null): Promise<{ genres: st
     }
 
     if (data) {
-      const userHidden = data.hiddenGenres || []
+      // Ensure userHidden is a valid string array
+      const userHidden = ensureStringArray(data.hiddenGenres)
       if (data.sensitiveContentUnlocked) {
         finalHidden = userHidden
       } else {
@@ -28,8 +38,11 @@ async function getHiddenGenres(listData?: ListData | null): Promise<{ genres: st
     console.error("Could not get hidden genres from IDB, defaulting to SENSITIVE_GENRES", e)
   }
 
+  // Defensive check: ensure finalHidden is a valid array
+  finalHidden = ensureStringArray(finalHidden)
+
   const allGenreNames = new Set(genres_list.map((g) => g.name))
-  const validHidden = (finalHidden as any[]).filter((g) => allGenreNames.has(g))
+  const validHidden = finalHidden.filter((g) => typeof g === "string" && allGenreNames.has(g as any))
 
   const hiddenGenres = validHidden.filter((name) => genres_list.find((g) => g.name === name)?.type === "genre")
   const hiddenTags = validHidden.filter((name) => genres_list.find((g) => g.name === name)?.type === "tag")

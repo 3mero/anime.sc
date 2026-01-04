@@ -19,7 +19,7 @@ export const MEDIA_FRAGMENT_CORE = `
   seasonYear
   startDate { year month day }
   isAdult
-  description(asHtml: false)
+  description
   nextAiringEpisode {
     episode
     airingAt
@@ -67,16 +67,28 @@ export const RELATIONS_FRAGMENT = `
   }
 `
 
-export const HOME_PAGE_QUERY = `
-query HomePageQuery($currentYear: Int, $currentSeason: MediaSeason, $genre_not_in: [String], $tag_not_in: [String]) {
+export const HOME_PAGE_PRIMARY_QUERY = `
+query HomePagePrimaryQuery($genre_not_in: [String], $tag_not_in: [String]) {
+  airing: Page(page: 1, perPage: 10) {
+    media(sort: POPULARITY_DESC, type: ANIME, status: RELEASING, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
+  }
+  releasingManga: Page(page: 1, perPage: 10) {
+    media(sort: POPULARITY_DESC, type: MANGA, status: RELEASING, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
+  }
+  latestAdditions: Page(page: 1, perPage: 10) {
+    media(sort: ID_DESC, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
+  }
+}
+fragment mediaFieldsCore on Media { ${MEDIA_FRAGMENT_CORE} }
+`
+
+export const HOME_PAGE_SECONDARY_QUERY = `
+query HomePageSecondaryQuery($currentYear: Int, $currentSeason: MediaSeason, $genre_not_in: [String], $tag_not_in: [String]) {
   trending: Page(page: 1, perPage: 10) {
     media(sort: TRENDING_DESC, type: ANIME, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
   }
   topThisSeason: Page(page: 1, perPage: 10) {
     media(sort: SCORE_DESC, type: ANIME, season: $currentSeason, seasonYear: $currentYear, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
-  }
-  airing: Page(page: 1, perPage: 10) {
-    media(sort: POPULARITY_DESC, type: ANIME, status: RELEASING, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
   }
   top: Page(page: 1, perPage: 10) {
     media(sort: SCORE_DESC, type: ANIME, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
@@ -102,23 +114,19 @@ query HomePageQuery($currentYear: Int, $currentSeason: MediaSeason, $genre_not_i
   topManga: Page(page: 1, perPage: 10) {
     media(sort: SCORE_DESC, type: MANGA, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
   }
-  releasingManga: Page(page: 1, perPage: 10) {
-    media(sort: POPULARITY_DESC, type: MANGA, status: RELEASING, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
-  }
   upcomingManga: Page(page: 1, perPage: 10) {
     media(sort: POPULARITY_DESC, type: MANGA, status: NOT_YET_RELEASED, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
-  }
-  latestAdditions: Page(page: 1, perPage: 10) {
-    media(sort: ID_DESC, isAdult: false, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) { ...mediaFieldsCore }
   }
 }
 fragment mediaFieldsCore on Media { ${MEDIA_FRAGMENT_CORE} }
 `
+// Leaving legacy export to avoid breaking other files if they use it (though they shouldn't)
+export const HOME_PAGE_QUERY = HOME_PAGE_PRIMARY_QUERY
 
 export const MULTIPLE_ANIME_QUERY = `
-query ($ids: [Int], $genre_not_in: [String], $tag_not_in: [String]) {
+query ($ids: [Int]) {
   Page(page: 1, perPage: 50) {
-    media(id_in: $ids, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) {
+    media(id_in: $ids) {
       ...mediaFieldsCore
     }
   }
@@ -127,7 +135,7 @@ fragment mediaFieldsCore on Media { ${MEDIA_FRAGMENT_CORE} }
 `
 
 export const MEDIA_RELATIONS_QUERY = `
-query MediaRelations($id: Int, $genre_not_in: [String], $tag_not_in: [String]) {
+query MediaRelations($id: Int) {
   Media(id: $id) {
     relations {
       edges {
@@ -143,8 +151,8 @@ fragment mediaFieldsCore on Media { ${MEDIA_FRAGMENT_CORE} }
 `
 
 export const MEDIA_BY_ID_QUERY = `
-query MediaById($id: Int, $genre_not_in: [String], $tag_not_in: [String]) {
-  Media(id: $id, genre_not_in: $genre_not_in, tag_not_in: $tag_not_in) {
+query MediaById($id: Int) {
+  Media(id: $id) {
     ...mediaFieldsCore
     ...mediaFragmentDetails
     ... on Media {
