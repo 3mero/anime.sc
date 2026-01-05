@@ -1,1 +1,1 @@
-export * from "../../src/components/notifications/reminder-dialog"
+export * from "@/components/notifications/reminder-dialog"

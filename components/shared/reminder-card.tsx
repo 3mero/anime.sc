@@ -1,1 +1,1 @@
-export * from "../../src/components/shared/reminder-card"
+export * from "@/components/shared/reminder-card"

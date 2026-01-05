@@ -1,1 +1,1 @@
-export * from "../../src/components/anime/anime-card"
+export * from "@/components/anime/anime-card"

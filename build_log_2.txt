@@ -1,0 +1,70 @@
+
+> nextn@0.1.0 build C:\Users\Omero\Downloads\animesync
+> next build
+
+  Γû▓ Next.js 14.2.35
+
+   Creating an optimized production build ...
+ ΓÜá Compiled with warnings
+
+./app/settings/page.tsx
+Should not import the named export 'version' (imported as 'packageJson') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./app/settings/page.tsx
+
+ ΓÜá Compiled with warnings
+
+./app/settings/page.tsx
+Should not import the named export 'version' (imported as 'packageJson') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./app/settings/page.tsx
+
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/19) ...
+   Generating static pages (4/19) 
+   Generating static pages (9/19) 
+   Generating static pages (14/19) 
+ Γ£ô Generating static pages (19/19)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+Γöî Γùï /                                    9.33 kB         221 kB
+Γö£ Γùï /_not-found                          880 B          88.3 kB
+Γö£ ╞Æ /anime/[id]                          5.41 kB         226 kB
+Γö£ ╞Æ /anime/[id]/recommendations          1.53 kB         209 kB
+Γö£ ╞Æ /api/anilist/search                  0 B                0 B
+Γö£ ╞Æ /api/proxy                           0 B                0 B
+Γö£ ╞Æ /character/[id]                      5.53 kB         159 kB
+Γö£ Γùï /data-sources                        299 B          96.4 kB
+Γö£ Γùï /genres                              1.75 kB         127 kB
+Γö£ ╞Æ /list/[type]/[page]                  2.11 kB         210 kB
+Γö£ Γùï /list/completed                      1.64 kB         209 kB
+Γö£ Γùï /list/plan-to-read                   1.25 kB         209 kB
+Γö£ Γùï /list/plan-to-watch                  1.25 kB         209 kB
+Γö£ Γùï /list/read                           1.68 kB         209 kB
+Γö£ Γùï /list/reading                        1.41 kB         209 kB
+Γö£ Γùï /list/watching                       1.35 kB         209 kB
+Γö£ ╞Æ /manga/[id]                          5.91 kB         226 kB
+Γö£ Γùï /news                                6.78 kB         151 kB
+Γö£ ╞Æ /person/[id]                         6.28 kB         162 kB
+Γö£ ╞Æ /recommendations/[page]              5.09 kB         164 kB
+Γö£ Γùï /schedules                           3.87 kB         201 kB
+Γö£ Γùï /search                              3.81 kB         220 kB
+Γö£ Γùï /seasons                             4.55 kB         145 kB
+Γö£ ╞Æ /seasons/[year]/[season]             162 B          87.6 kB
+Γö£ ╞Æ /seasons/[year]/[season]/[page]      3.01 kB         219 kB
+Γöö Γùï /settings                            17.9 kB         222 kB
++ First Load JS shared by all            87.4 kB
+  Γö£ chunks/2117-6e160d1857c91038.js      31.9 kB
+  Γö£ chunks/fd9d1056-c94a455c5b14996f.js  53.6 kB
+  Γöö other shared chunks (total)          1.9 kB
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+

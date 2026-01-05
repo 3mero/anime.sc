@@ -1,1 +1,1 @@
-export * from "../../src/components/anime/paginated-anime-grid"
+export * from "@/components/anime/paginated-anime-grid"

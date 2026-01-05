@@ -1,1 +1,1 @@
-export * from "../../src/components/ui/back-button"
+export * from "@/components/ui/back-button"

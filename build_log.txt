@@ -1,0 +1,35 @@
+
+> nextn@0.1.0 build C:\Users\Omero\Downloads\animesync
+> next build
+
+  Γû▓ Next.js 14.2.35
+
+   Creating an optimized production build ...
+ ΓÜá Compiled with warnings
+
+./app/settings/page.tsx
+Should not import the named export 'version' (imported as 'packageJson') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./app/settings/page.tsx
+
+ ΓÜá Compiled with warnings
+
+./app/settings/page.tsx
+Should not import the named export 'version' (imported as 'packageJson') from default-exporting module (only default export is available soon)
+
+Import trace for requested module:
+./app/settings/page.tsx
+
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./components_backup_legacy/components/anime/anime-card.tsx:1:15
+Type error: Cannot find module '../../src/components/anime/anime-card' or its corresponding type declarations.
+
+> 1 | export * from "../../src/components/anime/anime-card"
+    |               ^
+  2 |
+Next.js build worker exited with code: 1 and signal: null
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

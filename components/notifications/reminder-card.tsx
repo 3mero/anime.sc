@@ -1,1 +1,1 @@
-export * from "../../src/components/notifications/reminder-card"
+export * from "@/components/notifications/reminder-card"

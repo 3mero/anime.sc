@@ -1,1 +1,1 @@
-export * from "../../src/components/logging/debug-log-viewer"
+export * from "@/components/logging/debug-log-viewer"

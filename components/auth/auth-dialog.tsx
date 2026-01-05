@@ -1,1 +1,1 @@
-export * from "../../src/components/auth/auth-dialog"
+export * from "@/components/auth/auth-dialog"

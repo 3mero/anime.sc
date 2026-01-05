@@ -1,1 +1,1 @@
-export * from "../../src/components/ui/CodeBlock"
+export * from "@/components/ui/CodeBlock"
